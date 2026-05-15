@@ -13,6 +13,8 @@ from pydantic import Field
 if PYDANTIC_SETTINGS:
     class Settings(_BaseSettings):
         env: str = Field("development", env="ENV")
+        force_https: bool = Field(False, env="FORCE_HTTPS")
+        session_cookie_secure: bool = Field(False, env="SESSION_COOKIE_SECURE")
         database_url: str = Field(
             "postgresql+psycopg://postgres:postgres@db:5432/template_db",
             env="DATABASE_URL",
@@ -31,6 +33,8 @@ if PYDANTIC_SETTINGS:
 else:
     class Settings(_BaseSettings):
         env: str = Field("development", env="ENV")
+        force_https: bool = Field(False, env="FORCE_HTTPS")
+        session_cookie_secure: bool = Field(False, env="SESSION_COOKIE_SECURE")
         database_url: str = Field(
             "postgresql+psycopg://postgres:postgres@db:5432/template_db",
             env="DATABASE_URL",

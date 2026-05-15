@@ -1,6 +1,6 @@
 FROM python:3.14-slim AS builder
 
-WORKDIR /app
+WORKDIR /app/project
 
 COPY requirements.txt ./
 
@@ -17,14 +17,17 @@ ARG APP_USER=template
 ARG APP_UID=1000
 ARG APP_GID=1000
 
-ENV PYTHONUNBUFFERED=1
-WORKDIR /app
+ENV PYTHONUNBUFFERED=1 \
+    PYTHONDONTWRITEBYTECODE=1 \
+    PYTHONPATH=/app/project:/install \
+    PATH="/install/bin:${PATH}"
+WORKDIR /app/project
 
 # Copy installed packages from builder
 COPY --from=builder /install /install
 
 # Copy application
-COPY . /app
+COPY . /app/project
 
 # Ensure a non-root user exists and chown app dir
 RUN groupadd -g ${APP_GID} ${APP_USER} || true \
@@ -33,16 +36,14 @@ RUN groupadd -g ${APP_GID} ${APP_USER} || true \
 
 # Make entrypoint executable and ensure curl exists for healthchecks
 RUN apt-get update \
-    && apt-get install -y --no-install-recommends curl \
+    && apt-get install -y --no-install-recommends curl postgresql-client \
     && rm -rf /var/lib/apt/lists/* \
-    && chmod +x /app/scripts/docker-entrypoint.sh
-
-ENV PYTHONPATH=/install:${PYTHONPATH}
+    && chmod +x /app/project/scripts/docker-entrypoint.sh
 
 # Run containers as non-root user by default
 USER ${APP_USER}
 
-ENV PATH="/home/${APP_USER}/.local/bin:${PATH}"
+ENV PATH="/install/bin:/home/${APP_USER}/.local/bin:${PATH}"
 
-ENTRYPOINT ["/app/scripts/docker-entrypoint.sh"]
-CMD ["python", "-m", "uvicorn", "--factory", "src.app.factory:create_app", "--host", "0.0.0.0", "--port", "8000"]
+ENTRYPOINT ["/app/project/scripts/docker-entrypoint.sh"]
+CMD ["python", "-m", "uvicorn", "--app-dir", "/app/project", "--proxy-headers", "--forwarded-allow-ips", "*", "--factory", "src.app.factory:create_app", "--host", "0.0.0.0", "--port", "8000"]

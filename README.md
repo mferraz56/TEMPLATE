@@ -31,3 +31,10 @@ Documentation
 
 Extended documentation is in the `docs/` folder. See [docs/README.md](docs/README.md) for details.
 
+Deployment notes
+
+- Use `.env` only for local Compose. Set `ENV_FILE=.env` locally when you want Compose services to load it. The Docker image excludes `.env`; set production secrets in the platform panel.
+- Coolify deployments should use `POSTGRES_INTERNAL_PORT=5432` for container-to-container traffic and `POSTGRES_HOST_PORT` only for optional host exposure.
+- Production proxy deployments should set `ENV=production`, `FORCE_HTTPS=true`, and `SESSION_COOKIE_SECURE=true`.
+- See [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md) and [troubleshooting-coolify.md](troubleshooting-coolify.md).
+

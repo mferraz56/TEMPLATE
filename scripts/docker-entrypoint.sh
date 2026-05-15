@@ -11,19 +11,19 @@ log() { printf '[entrypoint] %s\n' "$*"; }
 
 RUN_MIGRATIONS="${RUN_MIGRATIONS:-0}"
 POSTGRES_HOST="${POSTGRES_HOST:-db}"
-POSTGRES_PORT="${POSTGRES_PORT:-5432}"
+POSTGRES_INTERNAL_PORT="${POSTGRES_INTERNAL_PORT:-5432}"
 POSTGRES_USER="${POSTGRES_USER:-postgres}"
 POSTGRES_WAIT_TIMEOUT="${POSTGRES_WAIT_TIMEOUT:-60}"
 
 wait_for_postgres() {
   command -v pg_isready >/dev/null 2>&1 || return 0
-  log "waiting for Postgres at ${POSTGRES_HOST}:${POSTGRES_PORT} (timeout ${POSTGRES_WAIT_TIMEOUT}s)"
+  log "waiting for Postgres at ${POSTGRES_HOST}:${POSTGRES_INTERNAL_PORT} (timeout ${POSTGRES_WAIT_TIMEOUT}s)"
   local i=0
-  while ! pg_isready -h "${POSTGRES_HOST}" -p "${POSTGRES_PORT}" -U "${POSTGRES_USER}" -q; do
+  while ! pg_isready -h "${POSTGRES_HOST}" -p "${POSTGRES_INTERNAL_PORT}" -U "${POSTGRES_USER}" -q; do
     i=$((i + 1))
     if [ "$i" -ge "${POSTGRES_WAIT_TIMEOUT}" ]; then
-      log "Postgres not ready after ${POSTGRES_WAIT_TIMEOUT}s, continuing anyway"
-      return 0
+      log "Postgres not ready after ${POSTGRES_WAIT_TIMEOUT}s"
+      return 1
     fi
     sleep 1
   done
@@ -35,12 +35,12 @@ run_migrations() {
     log "RUN_MIGRATIONS=${RUN_MIGRATIONS}, skipping alembic"
     return 0
   fi
-  if ! command -v alembic >/dev/null 2>&1; then
-    log "alembic binary not found; cannot run requested migrations"
+  if ! python -m alembic --version >/dev/null 2>&1; then
+    log "python -m alembic not available; cannot run requested migrations"
     return 1
   fi
-  log "running alembic upgrade head"
-  alembic upgrade head
+  log "running python -m alembic upgrade head"
+  python -m alembic upgrade head
 }
 
 wait_for_postgres

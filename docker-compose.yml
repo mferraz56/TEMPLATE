@@ -4,10 +4,16 @@ services:
     ports:
       - "${APP_PORT:-8000}:8000"
     env_file:
-      - .env
+      - ${ENV_FILE:-.env.example}
+    environment:
+      RUN_MIGRATIONS: "1"
+      POSTGRES_HOST: ${POSTGRES_HOST:-db}
+      POSTGRES_INTERNAL_PORT: ${POSTGRES_INTERNAL_PORT:-5432}
     depends_on:
-      - db
-      - redis
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
     healthcheck:
       test: ["CMD-SHELL", "curl -f http://localhost:8000/health || exit 1"]
       interval: 30s
@@ -21,10 +27,16 @@ services:
     build: .
     command: python -m celery -A src.app.celery_app.celery_app worker --loglevel=info --concurrency=1
     env_file:
-      - .env
+      - ${ENV_FILE:-.env.example}
+    environment:
+      RUN_MIGRATIONS: "0"
+      POSTGRES_HOST: ${POSTGRES_HOST:-db}
+      POSTGRES_INTERNAL_PORT: ${POSTGRES_INTERNAL_PORT:-5432}
     depends_on:
-      - redis
-      - db
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
     healthcheck:
       test: ["CMD-SHELL", "ps aux | grep -v grep | grep 'celery' || exit 1"]
       interval: 30s
@@ -55,13 +67,13 @@ services:
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
       POSTGRES_DB: ${POSTGRES_DB:-template_db}
     ports:
-      - "${POSTGRES_PORT:-5432}:5432"
+      - "${POSTGRES_HOST_PORT:-5432}:${POSTGRES_INTERNAL_PORT:-5432}"
     volumes:
       - pgdata:/var/lib/postgresql/data
     networks:
       - template_internal
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-postgres} -d ${POSTGRES_DB:-template_db} || exit 1"]
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-postgres} -d ${POSTGRES_DB:-template_db} -p ${POSTGRES_INTERNAL_PORT:-5432} || exit 1"]
       interval: 30s
       timeout: 5s
       retries: 5

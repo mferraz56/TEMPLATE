@@ -31,7 +31,7 @@ Database migrations
 ```bash
 ./scripts/migrate.sh
 # or
-alembic upgrade head
+python -m alembic upgrade head
 ```
 
 Docker (Compose)
